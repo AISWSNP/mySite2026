@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>가위바위보 게임 - Teachable Machine</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .controls {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 32px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .webcam-section {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        #webcam-container {
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            background: #f0f0f0;
+        }
+
+        #webcam-container canvas {
+            display: block;
+            max-width: 100%;
+            height: auto;
+        }
+
+        .prediction-box {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border: 2px solid #e9ecef;
+            transition: all 0.3s;
+        }
+
+        .prediction-box.updated {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .prediction-label {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 8px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .prediction-result {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .emoji {
+            font-size: 48px;
+            line-height: 1;
+        }
+
+        .result-info {
+            flex: 1;
+        }
+
+        .choice-name {
+            font-size: 24px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .probability-bar {
+            background: #e9ecef;
+            border-radius: 8px;
+            overflow: hidden;
+            height: 8px;
+            width: 100%;
+            margin-bottom: 5px;
+        }
+
+        .probability-fill {
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            height: 100%;
+            border-radius: 8px;
+            transition: width 0.3s ease;
+        }
+
+        .probability-text {
+            font-size: 14px;
+            color: #666;
+            font-weight: 600;
+        }
+
+        .category-colors {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            font-size: 12px;
+            color: #666;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .category-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .category-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .dot-scissors { background: #FF6B6B; }
+        .dot-rock { background: #4ECDC4; }
+        .dot-paper { background: #FFE66D; }
+        .dot-none { background: #95E1D3; }
+
+        .status-message {
+            text-align: center;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+            font-weight: 600;
+        }
+
+        .status-message.show {
+            display: block;
+        }
+
+        .status-message.loading {
+            background: #E8F4F8;
+            color: #0288D1;
+        }
+
+        .status-message.ready {
+            background: #E8F5E9;
+            color: #2E7D32;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 20px;
+            }
+
+            .header h1 {
+                font-size: 24px;
+            }
+
+            .prediction-box {
+                padding: 15px;
+            }
+
+            .emoji {
+                font-size: 36px;
+            }
+
+            .choice-name {
+                font-size: 18px;
+            }
+
+            .category-colors {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>✋ 가위바위보</h1>
+            <p>카메라로 손 모양을 보여주세요</p>
+        </div>
+
+        <div class="controls">
+            <button class="btn" onclick="startGame()">게임 시작</button>
+            <button class="btn" onclick="stopGame()" style="background: #999; margin-left: 10px;">중지</button>
+        </div>
+
+        <div id="status" class="status-message"></div>
+
+        <div class="webcam-section">
+            <div id="webcam-container"></div>
+        </div>
+
+        <div class="prediction-box" id="predictionBox">
+            <div class="prediction-label">현재 감지된 손 모양</div>
+            <div class="prediction-result">
+                <div class="emoji" id="choiceEmoji">🤔</div>
+                <div class="result-info">
+                    <div class="choice-name" id="choiceName">대기 중...</div>
+                    <div class="probability-bar">
+                        <div class="probability-fill" id="probabilityFill" style="width: 0%"></div>
+                    </div>
+                    <div class="probability-text" id="probabilityText">준비 중...</div>
+                </div>
+            </div>
+            <div class="category-colors">
+                <div class="category-info">
+                    <div class="category-dot dot-scissors"></div>
+                    <span>가위</span>
+                </div>
+                <div class="category-info">
+                    <div class="category-dot dot-rock"></div>
+                    <span>바위</span>
+                </div>
+                <div class="category-info">
+                    <div class="category-dot dot-paper"></div>
+                    <span>보</span>
+                </div>
+                <div class="category-info">
+                    <div class="category-dot dot-none"></div>
+                    <span>아무것도 안냄</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+    <script type="text/javascript">
+        const URL = "https://teachablemachine.withgoogle.com/models/E8isr6xYq/";
+        
+        let model, webcam, maxPredictions;
+        let predictionInterval = null;
+        let isGameRunning = false;
+
+        // 이모지와 카테고리 매핑
+        const categoryMap = {
+            '가위': { emoji: '✌️', color: '#FF6B6B' },
+            '바위': { emoji: '✊', color: '#4ECDC4' },
+            '보': { emoji: '✋', color: '#FFE66D' },
+            '아무것도 안냄': { emoji: '🤔', color: '#95E1D3' }
+        };
+
+        function showStatus(message, type = 'loading') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status-message show ${type}`;
+            setTimeout(() => {
+                status.classList.remove('show');
+            }, 3000);
+        }
+
+        async function startGame() {
+            if (isGameRunning) return;
+
+            showStatus('모델을 로드하는 중...', 'loading');
+
+            try {
+                const modelURL = URL + "model.json";
+                const metadataURL = URL + "metadata.json";
+
+                model = await tmImage.load(modelURL, metadataURL);
+                maxPredictions = model.getTotalClasses();
+
+                const flip = true;
+                webcam = new tmImage.Webcam(200, 200, flip);
+                await webcam.setup();
+                await webcam.play();
+
+                document.getElementById("webcam-container").innerHTML = '';
+                document.getElementById("webcam-container").appendChild(webcam.canvas);
+
+                isGameRunning = true;
+                showStatus('게임 준비 완료! 손을 보여주세요.', 'ready');
+
+                // 0.5초마다 예측 업데이트
+                predictionInterval = setInterval(predict, 500);
+
+            } catch (error) {
+                console.error('게임 시작 실패:', error);
+                showStatus('오류: 게임을 시작할 수 없습니다.', 'error');
+            }
+        }
+
+        function stopGame() {
+            if (!isGameRunning) return;
+
+            if (predictionInterval) {
+                clearInterval(predictionInterval);
+                predictionInterval = null;
+            }
+
+            if (webcam) {
+                webcam.stop();
+            }
+
+            isGameRunning = false;
+            document.getElementById('choiceName').textContent = '중지됨';
+            document.getElementById('probabilityText').textContent = '게임을 재시작하세요';
+            document.getElementById('probabilityFill').style.width = '0%';
+            showStatus('게임이 중지되었습니다.', 'loading');
+        }
+
+        async function predict() {
+            if (!isGameRunning || !webcam || !model) return;
+
+            try {
+                webcam.update();
+                const prediction = await model.predict(webcam.canvas);
+
+                // 가장 높은 확률 찾기
+                let maxProbability = 0;
+                let maxIndex = 0;
+
+                for (let i = 0; i < maxPredictions; i++) {
+                    if (prediction[i].probability > maxProbability) {
+                        maxProbability = prediction[i].probability;
+                        maxIndex = i;
+                    }
+                }
+
+                // 결과 업데이트
+                const className = prediction[maxIndex].className;
+                const probability = prediction[maxIndex].probability;
+                const categoryInfo = categoryMap[className];
+
+                document.getElementById('choiceEmoji').textContent = categoryInfo?.emoji || '🤔';
+                document.getElementById('choiceName').textContent = className;
+                document.getElementById('probabilityText').textContent = 
+                    `신뢰도: ${(probability * 100).toFixed(1)}%`;
+                document.getElementById('probabilityFill').style.width = 
+                    `${Math.min(probability * 100, 100)}%`;
+
+                // 예측 박스에 애니메이션 표시
+                const box = document.getElementById('predictionBox');
+                box.classList.remove('updated');
+                setTimeout(() => box.classList.add('updated'), 10);
+
+            } catch (error) {
+                console.error('예측 오류:', error);
+            }
+        }
+    </script>
+</body>
+</html>
