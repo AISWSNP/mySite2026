@@ -1,8 +1,8 @@
 {
   "files": {
-    "main.js": "/static/js/main.a550320a.js",
-    "index.html": "/index.html",
-    "main.a550320a.js.map": "/static/js/main.a550320a.js.map"
+    "main.js": "/mySite2026/rock-paper-scissors-game/static/js/main.a550320a.js",
+    "index.html": "/mySite2026/rock-paper-scissors-game/index.html",
+    "main.a550320a.js.map": "/mySite2026/rock-paper-scissors-game/static/js/main.a550320a.js.map"
   },
   "entrypoints": [
     "static/js/main.a550320a.js"
